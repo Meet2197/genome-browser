@@ -4,7 +4,7 @@ Genome Browser
 
 Built with **Flask + SQLite3** (backend/database) and a **vanilla JS/Canvas** frontend, designed to be swapped later for a production-grade **React + JBrowse 2** UI and **SQLite + Object Storage** backend.
 
-![1788246061142](image/README/1788246061142.png)
+![1788252401973](image/README/1788252401973.png)
 
 ---
 

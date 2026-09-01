@@ -354,8 +354,50 @@ document.getElementById("searchBox").addEventListener("input", () => {
 document.getElementById("hostFilter").addEventListener("change", () => loadGenomes());
 document.getElementById("envFilter").addEventListener("change", () => loadGenomes());
 
-// ---------- Init ----------
 
+// ---------- Global gene search across all genomes (Phase 6) ----------
+let globalSearchDebounce = null;
+document.getElementById("globalSearchBox").addEventListener("input", (e) => {
+  clearTimeout(globalSearchDebounce);
+  const q = e.target.value;
+  if (!q) {
+    document.getElementById("globalSearchResults").innerHTML = "";
+    return;
+  }
+  globalSearchDebounce = setTimeout(async () => {
+    const res = await fetch(`${API}/search?q=${encodeURIComponent(q)}`);
+    const results = await res.json();
+    renderGlobalSearchResults(results);
+  }, 300);
+});
+
+function renderGlobalSearchResults(results) {
+  const container = document.getElementById("globalSearchResults");
+  if (results.length === 0) {
+    container.innerHTML = "No matches found.";
+    return;
+  }
+  container.innerHTML = results.slice(0, 8).map(r =>
+    `<span style="cursor:pointer; text-decoration:underline; margin-right:10px;"
+       onclick="jumpToGeneResult(${r.genome_id}, ${r.start}, ${r.end}, ${r.id})">
+       ${r.gene_name || r.locus_tag} (${r.genome_name})
+     </span>`
+  ).join("");
+}
+
+async function jumpToGeneResult(genomeId, start, end, geneId) {
+  await selectGenome(genomeId);
+  viewStart = Math.max(0, start - 3000);
+  viewEnd = end + 3000;
+  syncInputs();
+  await loadAndRenderTracks();
+  const res = await fetch(`${API}/genes/${geneId}`);
+  const detail = await res.json();
+  renderDetail(detail);
+}
+
+// ---------- Init ----------
+loadGenomes();
 // ---------- Auth ----------
 async function checkAuth() {
   const res = await fetch(`${API}/auth/me`);

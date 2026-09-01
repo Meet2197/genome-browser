@@ -3,12 +3,12 @@ from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
 from functools import wraps
 import secrets
-from storage_client import get_presigned_url
+from storage_client import get_presigned_url, is_available as minio_available
 from database import get_connection, init_db, is_empty
 import seed_data
 
 app = Flask(__name__, static_folder="static", static_url_path="")
-CORS(app, supports_credentials=True)
+CORS(app)
 
 app.secret_key = secrets.token_hex(32)
 app.config.update(
@@ -204,7 +204,37 @@ def get_genome(genome_id):
     result["environmental_metadata"] = dict(meta) if meta else None
     return jsonify(result)
 
+@app.route("/api/storage/status")
+def storage_status():
+    return jsonify({"minio_available": minio_available()})
 
+
+@app.route("/api/genomes/<int:genome_id>/files")
+def genome_files(genome_id):
+    conn = get_connection()
+    genome = conn.execute("SELECT * FROM genomes WHERE id=?", (genome_id,)).fetchone()
+    conn.close()
+    if not genome:
+        abort(404)
+
+    acc = genome["assembly_accession"]
+
+    if minio_available():
+        return jsonify({
+            "source": "minio",
+            "fasta_url": get_presigned_url(f"jbrowse/{acc}.fa"),
+            "fasta_index_url": get_presigned_url(f"jbrowse/{acc}.fa.fai"),
+            "gff_url": get_presigned_url(f"jbrowse/{acc}.sorted.gff3.gz"),
+            "gff_index_url": get_presigned_url(f"jbrowse/{acc}.sorted.gff3.gz.tbi"),
+        })
+    else:
+        return jsonify({
+            "source": "local",
+            "fasta_url": f"/storage/jbrowse/{acc}.fa",
+            "fasta_index_url": f"/storage/jbrowse/{acc}.fa.fai",
+            "gff_url": f"/storage/jbrowse/{acc}.sorted.gff3.gz",
+            "gff_index_url": f"/storage/jbrowse/{acc}.sorted.gff3.gz.tbi",
+        })
 # ---------------------------------------------------------------
 # Track endpoints (region-based queries: ?start=&end=)
 # ---------------------------------------------------------------
@@ -315,14 +345,46 @@ def get_gene_detail(gene_id):
 # ---------------------------------------------------------------
 @app.route("/api/search")
 def search_genes():
-    q = request.args.get("q", "")
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify([])
+
+    conn = get_connection()
+    try:
+        rows = conn.execute(
+            """SELECT g.*, genomes.name as genome_name
+               FROM genes g
+               JOIN gene_search fts ON g.id = fts.rowid
+               JOIN genomes ON g.genome_id = genomes.id
+               WHERE gene_search MATCH ?
+               ORDER BY rank
+               LIMIT 50""",
+            (q + "*",)
+        ).fetchall()
+    except Exception:
+        # Fallback if query has FTS5 special characters that break MATCH syntax
+        rows = conn.execute(
+            """SELECT g.*, genomes.name as genome_name
+               FROM genes g JOIN genomes ON g.genome_id = genomes.id
+               WHERE g.gene_name LIKE ? OR g.product LIKE ?
+               LIMIT 50""",
+            (f"%{q}%", f"%{q}%")
+        ).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/search/genomes")
+def search_genomes_fulltext():
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify([])
     conn = get_connection()
     rows = conn.execute(
-        """SELECT g.* FROM genes g
-           JOIN gene_search fts ON g.id = fts.rowid
-           WHERE gene_search MATCH ?
+        """SELECT * FROM genomes
+           WHERE name LIKE ? OR organism LIKE ? OR host_plant LIKE ? OR environment LIKE ?
            LIMIT 50""",
-        (q,)
+        tuple(f"%{q}%" for _ in range(4))
     ).fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])

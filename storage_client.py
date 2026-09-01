@@ -1,5 +1,6 @@
 import boto3
 from botocore.client import Config
+from botocore.exceptions import ClientError
 
 MINIO_ENDPOINT = "http://localhost:9000"
 ACCESS_KEY = "minioadmin"
@@ -15,17 +16,32 @@ s3 = boto3.client(
     region_name="us-east-1",
 )
 
+
+def is_available() -> bool:
+    """Check whether the MinIO server is reachable."""
+    try:
+        s3.list_buckets()
+        return True
+    except Exception:
+        return False
+
+
 def ensure_bucket():
     existing = [b["Name"] for b in s3.list_buckets()["Buckets"]]
     if BUCKET not in existing:
         s3.create_bucket(Bucket=BUCKET)
 
-def upload_file(local_path: str, object_name: str):
+
+def upload_file(local_path: str, object_name: str) -> str:
     ensure_bucket()
     s3.upload_file(local_path, BUCKET, object_name)
     return f"{MINIO_ENDPOINT}/{BUCKET}/{object_name}"
 
-def get_presigned_url(object_name: str, expires_in=3600):
-    return s3.generate_presigned_url(
-        "get_object", Params={"Bucket": BUCKET, "Key": object_name}, ExpiresIn=expires_in
-    )
+
+def get_presigned_url(object_name: str, expires_in: int = 3600) -> str:
+    try:
+        return s3.generate_presigned_url(
+            "get_object", Params={"Bucket": BUCKET, "Key": object_name}, ExpiresIn=expires_in
+        )
+    except ClientError:
+        return None

@@ -7,21 +7,6 @@
 </head>
 <body>
   <div id="authBar" style="background:#eef5ef; padding:6px 12px; font-size:13px; display:flex; gap:10px; align-items:center;">
-    <span id="authStatus">Not logged in</span>
-    <input id="authUsername" placeholder="username" style="width:100px;" />
-    <input id="authPassword" type="password" placeholder="password" style="width:100px;" />
-    <button id="loginBtn">Login</button>
-    <button id="registerBtn">Register</button>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-    <button id="bookmarkBtn" style="margin-left:auto;">🔖 Bookmark current view</button>
-  </div>
-
-  <header class="topbar">
-    <h1>🌱 Plant Microbiome Genome Browser</h1>
-    <p>Explore plant-associated microbial genomes, annotations & comparative genomics</p>
-    <a href="/synteny.html" style="color:white; margin-left:20px;">🔗 Synteny View</a>
-  </header>
-  <div id="authBar" style="background:#eef5ef; padding:6px 12px; font-size:13px; display:flex; gap:10px; align-items:center;">
   <span id="authStatus">Not logged in</span>
   <input id="authUsername" placeholder="username" style="width:100px;" />
   <input id="authPassword" type="password" placeholder="password" style="width:100px;" />
@@ -30,6 +15,12 @@
   <button id="logoutBtn" style="display:none;">Logout</button>
   <button id="bookmarkBtn" style="margin-left:auto;">🔖 Bookmark current view</button>
 </div>
+
+  <header class="topbar">
+    <h1>🌱 Plant Microbiome Genome Browser</h1>
+    <p>Explore plant-associated microbial genomes, annotations & comparative genomics</p>
+    <a href="/synteny.html" style="color:white; margin-left:20px;">🔗 Synteny View</a>
+  </header>
   <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -46,6 +37,10 @@
 
     <!-- Main viewer -->
     <main class="viewer">
+      <div style="padding:8px 12px; background:#f0f4f1; border-bottom:1px solid #ddd; display:flex; gap:8px; align-items:center; margin-bottom:8px;">
+        <input id="globalSearchBox" placeholder="🔍 Search genes across all genomes (e.g. 'pyoverdine', 'acdS')..." style="flex:1; padding:6px;" />
+        <div id="globalSearchResults" style="font-size:12px; color:#555;"></div>
+      </div>
       <div class="viewer-header">
         <div>
           <strong>Genome:</strong> <span id="gName">-</span>

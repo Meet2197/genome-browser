@@ -3,6 +3,10 @@ venv/
 env/
 __pycache__/
 *.pyc
+minio.exe
+minio_data/
+eggnog_db/
+results/
 
 # Database (generated at runtime via seed_data.py)
 genome_browser.db
