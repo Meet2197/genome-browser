@@ -39,9 +39,11 @@ async function loadGenomes(preserveFocus = false) {
 function populateFilters() {
   const hostSel = document.getElementById("hostFilter");
   const envSel = document.getElementById("envFilter");
+  const droughtSel = document.getElementById("droughtFilter");
   if (hostSel.options.length > 1) return;
   const hosts = [...new Set(genomes.map(g => g.host_plant).filter(Boolean))];
   const envs = [...new Set(genomes.map(g => g.environment).filter(Boolean))];
+  const droughts = [...new Set(genomes.map(g => g.drought_treatment).filter(Boolean))];
   hosts.forEach(h => hostSel.add(new Option(h, h)));
   envs.forEach(e => envSel.add(new Option(e, e)));
 }
@@ -353,4 +355,59 @@ document.getElementById("hostFilter").addEventListener("change", () => loadGenom
 document.getElementById("envFilter").addEventListener("change", () => loadGenomes());
 
 // ---------- Init ----------
-loadGenomes();
+
+// ---------- Auth ----------
+async function checkAuth() {
+  const res = await fetch(`${API}/auth/me`);
+  const data = await res.json();
+  const statusEl = document.getElementById("authStatus");
+  if (data.user) {
+    statusEl.innerText = `Logged in as ${data.user.username || data.username}`;
+    document.getElementById("logoutBtn").style.display = "inline";
+  } else {
+    statusEl.innerText = "Not logged in";
+    document.getElementById("logoutBtn").style.display = "none";
+  }
+}
+
+document.getElementById("registerBtn").onclick = async () => {
+  const username = document.getElementById("authUsername").value;
+  const password = document.getElementById("authPassword").value;
+  const res = await fetch(`${API}/auth/register`, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({username, password})
+  });
+  const data = await res.json();
+  if (res.ok) { alert(`Registered as ${data.username}`); checkAuth(); }
+  else alert(data.error);
+};
+
+document.getElementById("loginBtn").onclick = async () => {
+  const username = document.getElementById("authUsername").value;
+  const password = document.getElementById("authPassword").value;
+  const res = await fetch(`${API}/auth/login`, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({username, password})
+  });
+  const data = await res.json();
+  if (res.ok) { checkAuth(); } else alert(data.error);
+};
+
+document.getElementById("logoutBtn").onclick = async () => {
+  await fetch(`${API}/auth/logout`, {method: "POST"});
+  checkAuth();
+};
+
+document.getElementById("bookmarkBtn").onclick = async () => {
+  if (!currentGenome) return alert("Select a genome first");
+  const label = prompt("Bookmark label:", `${currentGenome.name} ${viewStart}-${viewEnd}`);
+  if (label === null) return;
+  const res = await fetch(`${API}/bookmarks`, {
+    method: "POST", headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({genome_id: currentGenome.id, start: viewStart, end: viewEnd, label})
+  });
+  if (res.ok) alert("Bookmarked!");
+  else alert("Login required to bookmark views.");
+};
+
+checkAuth();

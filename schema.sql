@@ -119,6 +119,23 @@ CREATE TABLE IF NOT EXISTS comparative_genomics (
     identity_percent    REAL
 );
 
+CREATE TABLE IF NOT EXISTS users (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    username      TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at    TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS bookmarks (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id     INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    genome_id   INTEGER NOT NULL REFERENCES genomes(id) ON DELETE CASCADE,
+    start       INTEGER NOT NULL,
+    end         INTEGER NOT NULL,
+    label       TEXT,
+    created_at  TEXT DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Environmental metadata (FAIR / MIxS-style)
 CREATE TABLE IF NOT EXISTS environmental_metadata (
     id                INTEGER PRIMARY KEY AUTOINCREMENT,

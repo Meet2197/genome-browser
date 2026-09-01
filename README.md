@@ -4,8 +4,7 @@ Genome Browser
 
 Built with **Flask + SQLite3** (backend/database) and a **vanilla JS/Canvas** frontend, designed to be swapped later for a production-grade **React + JBrowse 2** UI and **SQLite + Object Storage** backend.
 
-
-![1788244275845](image/README/1788244275845.png)
+![1788246061142](image/README/1788246061142.png)
 
 ---
 
@@ -45,7 +44,7 @@ SQLite3 Database
   └── environmental_metadata
 ```
 
-> **Target Architecture:** Designed to scale toward a **React + TypeScript + JBrowse 2** frontend, **Django / FastAPI** microservices backend, **PostgreSQL + PostGIS** database, **Object Storage (S3/MinIO)** for FASTA/BAM/VCF alignment files, and **OpenSearch** for full-text gene indexing.
+> **Target Architecture:** Designed to scale toward a **React + TypeScript + JBrowse 2** frontend, **Django / FastAPI** microservices backend, **SQLite** database, **Object Storage (S3/MinIO)** for FASTA/BAM/VCF alignment files, and **OpenSearch** for full-text gene indexing.
 
 ---
 

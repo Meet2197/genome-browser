@@ -1,11 +1,28 @@
-from flask import Flask, jsonify, request, abort, send_from_directory
+from flask import Flask, jsonify, request, abort, send_from_directory, session
 from flask_cors import CORS
-
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
+import secrets
+from storage_client import get_presigned_url
 from database import get_connection, init_db, is_empty
 import seed_data
 
 app = Flask(__name__, static_folder="static", static_url_path="")
-CORS(app)
+CORS(app, supports_credentials=True)
+
+app.secret_key = secrets.token_hex(32)
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
+
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            return jsonify({"error": "Authentication required"}), 401
+        return f(*args, **kwargs)
+    return wrapper
 
 # ---------------------------------------------------------------
 # Startup: init DB + seed if empty
@@ -26,6 +43,112 @@ def serve_index():
     return send_from_directory(app.static_folder, "index.html")
 
 
+
+# ---------------------------------------------------------------
+# Authentication endpoints
+# ---------------------------------------------------------------
+@app.route("/api/auth/register", methods=["POST"])
+def register():
+    data = request.get_json()
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+    if not username or not password:
+        return jsonify({"error": "username and password required"}), 400
+
+    conn = get_connection()
+    existing = conn.execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({"error": "username already taken"}), 409
+
+    pw_hash = generate_password_hash(password)
+    cur = conn.execute("INSERT INTO users (username, password_hash) VALUES (?,?)", (username, pw_hash))
+    conn.commit()
+    user_id = cur.lastrowid
+    conn.close()
+
+    session["user_id"] = user_id
+    session["username"] = username
+    return jsonify({"id": user_id, "username": username})
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    username = data.get("username", "").strip()
+    password = data.get("password", "")
+
+    conn = get_connection()
+    user = conn.execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
+    conn.close()
+
+    if not user or not check_password_hash(user["password_hash"], password):
+        return jsonify({"error": "invalid credentials"}), 401
+
+    session["user_id"] = user["id"]
+    session["username"] = user["username"]
+    return jsonify({"id": user["id"], "username": user["username"]})
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return jsonify({"status": "logged out"})
+
+
+@app.route("/api/auth/me")
+def me():
+    if "user_id" not in session:
+        return jsonify({"user": None})
+    return jsonify({"user": {"id": session["user_id"], "username": session["username"]}})
+
+
+# ---------------------------------------------------------------
+# Bookmark endpoints
+# ---------------------------------------------------------------
+@app.route("/api/bookmarks", methods=["GET"])
+@login_required
+def list_bookmarks():
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT b.*, g.name as genome_name FROM bookmarks b
+           JOIN genomes g ON b.genome_id = g.id
+           WHERE b.user_id=? ORDER BY b.created_at DESC""",
+        (session["user_id"],)
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/api/bookmarks", methods=["POST"])
+@login_required
+def create_bookmark():
+    data = request.get_json()
+    conn = get_connection()
+    cur = conn.execute(
+        """INSERT INTO bookmarks (user_id, genome_id, start, end, label)
+           VALUES (?,?,?,?,?)""",
+        (session["user_id"], data["genome_id"], data["start"], data["end"], data.get("label", ""))
+    )
+    conn.commit()
+    bookmark_id = cur.lastrowid
+    conn.close()
+    return jsonify({"id": bookmark_id})
+
+
+@app.route("/api/bookmarks/<int:bookmark_id>", methods=["DELETE"])
+@login_required
+def delete_bookmark(bookmark_id):
+    conn = get_connection()
+    conn.execute(
+        "DELETE FROM bookmarks WHERE id=? AND user_id=?",
+        (bookmark_id, session["user_id"])
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "deleted"})
+
+
 @app.route("/api/genomes/<int:genome_id>/first_genes")
 def get_first_genes(genome_id):
     conn = get_connection()
@@ -35,6 +158,7 @@ def get_first_genes(genome_id):
     ).fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])
+
 
 # ---------------------------------------------------------------
 # Genome endpoints
@@ -220,6 +344,39 @@ def get_comparative(genome_id):
     conn.close()
     return jsonify([dict(r) for r in rows])
 
+
+# ---------------------------------------------------------------
+# Synteny comparison
+# ---------------------------------------------------------------
+@app.route("/api/synteny")
+def synteny():
+    genome_a = request.args.get("genome_a", type=int)
+    genome_b = request.args.get("genome_b", type=int)
+    if not genome_a or not genome_b:
+        return jsonify({"error": "genome_a and genome_b required"}), 400
+
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT cg.identity_percent,
+                  ga.id as gene_a_id, ga.gene_name as gene_a_name, ga.start as a_start, ga.end as a_end,
+                  gb.id as gene_b_id, gb.gene_name as gene_b_name, gb.start as b_start, gb.end as b_end
+           FROM comparative_genomics cg
+           JOIN genes ga ON cg.gene_id = ga.id
+           JOIN genes gb ON cg.ortholog_gene_id = gb.id
+           WHERE cg.genome_id=? AND cg.compared_genome_id=?
+           ORDER BY ga.start""",
+        (genome_a, genome_b)
+    ).fetchall()
+
+    genome_a_info = conn.execute("SELECT id, name, genome_size FROM genomes WHERE id=?", (genome_a,)).fetchone()
+    genome_b_info = conn.execute("SELECT id, name, genome_size FROM genomes WHERE id=?", (genome_b,)).fetchone()
+    conn.close()
+
+    return jsonify({
+        "genome_a": dict(genome_a_info),
+        "genome_b": dict(genome_b_info),
+        "links": [dict(r) for r in rows]
+    })
 
 # ---------------------------------------------------------------
 # Error handler

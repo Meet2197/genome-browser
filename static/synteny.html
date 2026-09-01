@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Synteny Comparison</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  body { margin:0; padding:20px; background:#f5f7fa; }
+  .controls { display:flex; gap:10px; margin-bottom:16px; align-items:center; }
+  select { padding:6px; }
+  svg { background:white; border:1px solid #ddd; border-radius:6px; }
+  .track-label { font-size:13px; font-weight:bold; fill:#1f4732; }
+  .gene-a { fill:#2f7d32; }
+  .gene-b { fill:#4a90e2; }
+  .link { stroke:#999; stroke-opacity:0.4; fill:none; }
+  .link:hover { stroke:#e8b400; stroke-opacity:0.9; stroke-width:2; }
+  a { color:#1f4732; }
+</style>
+</head>
+<body>
+  <a href="/">&larr; Back to Genome Browser</a>
+  <h2>🧬 Genome Synteny Comparison</h2>
+  <div class="controls">
+    Genome A: <select id="genomeA"></select>
+    Genome B: <select id="genomeB"></select>
+    <button id="compareBtn">Compare</button>
+  </div>
+  <div id="stats" style="margin-bottom:10px; font-size:13px; color:#555;"></div>
+  <svg id="synteny" width="1100" height="400"></svg>
+
+  <script>
+    const API = "/api";
+    let genomes = [];
+
+    async function loadGenomeOptions() {
+      const res = await fetch(`${API}/genomes`);
+      genomes = await res.json();
+      const selA = document.getElementById("genomeA");
+      const selB = document.getElementById("genomeB");
+      genomes.forEach(g => {
+        selA.add(new Option(g.name, g.id));
+        selB.add(new Option(g.name, g.id));
+      });
+      if (genomes.length > 1) selB.selectedIndex = 1;
+    }
+
+    async function drawSynteny() {
+      const gidA = document.getElementById("genomeA").value;
+      const gidB = document.getElementById("genomeB").value;
+      const res = await fetch(`${API}/synteny?genome_a=${gidA}&genome_b=${gidB}`);
+      const data = await res.json();
+
+      document.getElementById("stats").innerText =
+        `${data.genome_a.name} vs ${data.genome_b.name} — ${data.links.length} ortholog pairs found`;
+
+      const svg = document.getElementById("synteny");
+      svg.innerHTML = "";
+      const width = 1100, height = 400;
+      const trackY_A = 80, trackY_B = 320;
+      const maxLenA = data.genome_a.genome_size || 1;
+      const maxLenB = data.genome_b.genome_size || 1;
+      const xScaleA = pos => 50 + (pos / maxLenA) * (width - 100);
+      const xScaleB = pos => 50 + (pos / maxLenB) * (width - 100);
+
+      const ns = "http://www.w3.org/2000/svg";
+      function el(tag, attrs) {
+        const e = document.createElementNS(ns, tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        return e;
+      }
+
+      // Track lines
+      svg.appendChild(el("line", {x1:50, y1:trackY_A, x2:width-50, y2:trackY_A, stroke:"#ccc", "stroke-width":6}));
+      svg.appendChild(el("line", {x1:50, y1:trackY_B, x2:width-50, y2:trackY_B, stroke:"#ccc", "stroke-width":6}));
+
+      const labelA = el("text", {x:50, y:trackY_A-15, class:"track-label"});
+      labelA.textContent = data.genome_a.name;
+      svg.appendChild(labelA);
+
+      const labelB = el("text", {x:50, y:trackY_B+35, class:"track-label"});
+      labelB.textContent = data.genome_b.name;
+      svg.appendChild(labelB);
+
+      // Links + gene markers
+      data.links.forEach(link => {
+        const xA = xScaleA(link.a_start);
+        const xB = xScaleB(link.b_start);
+
+        const path = el("path", {
+          d: `M ${xA} ${trackY_A} C ${xA} ${(trackY_A+trackY_B)/2}, ${xB} ${(trackY_A+trackY_B)/2}, ${xB} ${trackY_B}`,
+          class: "link"
+        });
+        const title = document.createElementNS(ns, "title");
+        title.textContent = `${link.gene_a_name} ↔ ${link.gene_b_name} (${link.identity_percent}% identity)`;
+        path.appendChild(title);
+        svg.appendChild(path);
+
+        svg.appendChild(el("circle", {cx:xA, cy:trackY_A, r:4, class:"gene-a"}));
+        svg.appendChild(el("circle", {cx:xB, cy:trackY_B, r:4, class:"gene-b"}));
+      });
+    }
+
+    document.getElementById("compareBtn").onclick = drawSynteny;
+    loadGenomeOptions();
+  </script>
+</body>
+</html>

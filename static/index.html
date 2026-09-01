@@ -6,11 +6,30 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <header class="topbar">
-    <h1>🌱 Genome Browser</h1>
-    <p>Explore plant-associated microbial genomes, annotations & comparative genomics</p>
-  </header>
+  <div id="authBar" style="background:#eef5ef; padding:6px 12px; font-size:13px; display:flex; gap:10px; align-items:center;">
+    <span id="authStatus">Not logged in</span>
+    <input id="authUsername" placeholder="username" style="width:100px;" />
+    <input id="authPassword" type="password" placeholder="password" style="width:100px;" />
+    <button id="loginBtn">Login</button>
+    <button id="registerBtn">Register</button>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+    <button id="bookmarkBtn" style="margin-left:auto;">🔖 Bookmark current view</button>
+  </div>
 
+  <header class="topbar">
+    <h1>🌱 Plant Microbiome Genome Browser</h1>
+    <p>Explore plant-associated microbial genomes, annotations & comparative genomics</p>
+    <a href="/synteny.html" style="color:white; margin-left:20px;">🔗 Synteny View</a>
+  </header>
+  <div id="authBar" style="background:#eef5ef; padding:6px 12px; font-size:13px; display:flex; gap:10px; align-items:center;">
+  <span id="authStatus">Not logged in</span>
+  <input id="authUsername" placeholder="username" style="width:100px;" />
+  <input id="authPassword" type="password" placeholder="password" style="width:100px;" />
+  <button id="loginBtn">Login</button>
+  <button id="registerBtn">Register</button>
+  <button id="logoutBtn" style="display:none;">Logout</button>
+  <button id="bookmarkBtn" style="margin-left:auto;">🔖 Bookmark current view</button>
+</div>
   <div class="layout">
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -19,6 +38,7 @@
       <div class="filters">
         <select id="hostFilter"><option value="">All Host Plants</option></select>
         <select id="envFilter"><option value="">All Environments</option></select>
+        <select id="droughtFilter"><option value="">All Treatments</option></select>
       </div>
       <ul id="genomeList" class="genome-list"></ul>
       <div class="total">Total Genomes: <span id="totalCount">0</span></div>
