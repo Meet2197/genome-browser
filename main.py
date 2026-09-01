@@ -389,6 +389,25 @@ def search_genomes_fulltext():
     conn.close()
     return jsonify([dict(r) for r in rows])
 
+@app.route("/api/pipeline_status")
+def pipeline_status():
+    """Reports which genomes have gene/ortholog/coverage data, useful
+       for tracking which Phase 7 pipelines have been run."""
+    conn = get_connection()
+    genomes = conn.execute("SELECT id, name FROM genomes").fetchall()
+    result = []
+    for g in genomes:
+        gene_count = conn.execute("SELECT COUNT(*) c FROM genes WHERE genome_id=?", (g["id"],)).fetchone()["c"]
+        cov_count = conn.execute("SELECT COUNT(*) c FROM coverage WHERE genome_id=?", (g["id"],)).fetchone()["c"]
+        ortholog_count = conn.execute(
+            "SELECT COUNT(*) c FROM comparative_genomics WHERE genome_id=?", (g["id"],)
+        ).fetchone()["c"]
+        result.append({
+            "genome_id": g["id"], "name": g["name"],
+            "genes": gene_count, "coverage_windows": cov_count, "orthologs": ortholog_count
+        })
+    conn.close()
+    return jsonify(result)
 
 # ---------------------------------------------------------------
 # Comparative genomics
