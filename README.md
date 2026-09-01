@@ -2,7 +2,7 @@ Genome Browser
 
 > A lightweight, full-stack genome browser for exploring plant-associated microbial genomes — annotations, GC content, tRNA/rRNA, mobile genetic elements, SNPs, metagenomic coverage, and comparative genomics — inspired by JBrowse 2 multi-track visualization.
 
-Built with **Flask + SQLite3** (backend/database) and a **vanilla JS/Canvas** frontend, designed to be swapped later for a production-grade **React + JBrowse 2** UI and **PostgreSQL + Object Storage** backend.
+Built with **Flask + SQLite3** (backend/database) and a **vanilla JS/Canvas** frontend, designed to be swapped later for a production-grade **React + JBrowse 2** UI and **SQLite + Object Storage** backend.
 
 ---
 
