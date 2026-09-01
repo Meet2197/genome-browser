@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Genome Browser</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>🌱 Genome Browser</h1>
+    <p>Explore plant-associated microbial genomes, annotations & comparative genomics</p>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h3>Available Genomes</h3>
+      <input id="searchBox" placeholder="Search genomes..." />
+      <div class="filters">
+        <select id="hostFilter"><option value="">All Host Plants</option></select>
+        <select id="envFilter"><option value="">All Environments</option></select>
+      </div>
+      <ul id="genomeList" class="genome-list"></ul>
+      <div class="total">Total Genomes: <span id="totalCount">0</span></div>
+    </aside>
+
+    <!-- Main viewer -->
+    <main class="viewer">
+      <div class="viewer-header">
+        <div>
+          <strong>Genome:</strong> <span id="gName">-</span>
+          &nbsp; <strong>Assembly:</strong> <span id="gAssembly">-</span>
+          &nbsp; <strong>Length:</strong> <span id="gLength">-</span>
+          &nbsp; <strong>GC%:</strong> <span id="gGC">-</span>
+        </div>
+      </div>
+
+      <div class="nav-bar">
+        <button id="prevBtn">◀</button>
+        <button id="zoomOutBtn">－</button>
+        <input id="startInput" type="number" placeholder="start"/>
+        <input id="endInput" type="number" placeholder="end"/>
+        <button id="goBtn">Go</button>
+        <button id="zoomInBtn">＋</button>
+        <button id="nextBtn">▶</button>
+      </div>
+
+      <canvas id="trackCanvas" width="1000" height="560"></canvas>
+    </main>
+
+    <!-- Detail panel -->
+    <aside class="details">
+      <h3>Details</h3>
+      <div id="detailPanel">Select a gene to view details.</div>
+    </aside>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
