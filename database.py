@@ -7,9 +7,11 @@ SCHEMA_PATH = Path(__file__).parent / "schema.sql"
 
 
 def get_connection() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(DB_PATH, timeout=30)  # wait up to 30s for locks instead of failing instantly
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")     # allows concurrent readers + one writer
+    conn.execute("PRAGMA busy_timeout = 30000")   # extra safety: 30s busy timeout at SQLite level
     return conn
 
 

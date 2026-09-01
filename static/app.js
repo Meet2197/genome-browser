@@ -89,9 +89,8 @@ async function selectGenome(id) {
     if (firstGenes.length > 0) {
       const firstStart = firstGenes[0].start;
       viewStart = Math.max(0, firstStart - 2000);
-      viewEnd = viewStart + 40000; // ~40kb window, should contain several genes
+      viewEnd = viewStart + 40000;
     } else {
-      // Fallback if genome somehow has no genes at all
       viewStart = 0;
       viewEnd = Math.min(60000, currentGenome.genome_size || 60000);
     }

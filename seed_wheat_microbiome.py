@@ -4,13 +4,13 @@ from database import db_session, get_connection
 random.seed(7)
 
 WHEAT_GENOMES = [
-    dict(name="Pseudomonas fluorescens SBW25", assembly_accession="GCF_000009225.1",
+    dict(name="Pseudomonas fluorescens SBW25", assembly_accession="GCF_931907645.1",
          organism="Pseudomonas fluorescens SBW25", host_plant="Triticum aestivum",
          environment="Wheat Rhizosphere - Control", genome_size=6722539, gc_content=60.5,
          drought_treatment="Control", precipitation_reduction_percent=0,
          study_reference="Long-term drought manipulation experiment, ZALF (Azarbad et al.-style)"),
 
-    dict(name="Pseudomonas fluorescens SBW25 (Drought)", assembly_accession="GCF_000009225.1",
+    dict(name="Pseudomonas fluorescens SBW25 (Drought)", assembly_accession="GCF_931907645.1",
          organism="Pseudomonas fluorescens SBW25", host_plant="Triticum aestivum",
          environment="Wheat Rhizosphere - Drought-stressed", genome_size=6722539, gc_content=60.5,
          drought_treatment="Drought", precipitation_reduction_percent=30,
